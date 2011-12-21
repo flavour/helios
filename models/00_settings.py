@@ -256,6 +256,7 @@ mail.settings.sender = deployment_settings.get_mail_sender()
 ######
 # Auth
 ######
+auth.settings.login_next = URL(c="default", f="item_entity")
 
 auth.settings.password_min_length = 4
 auth.settings.expiration = 28800  # seconds

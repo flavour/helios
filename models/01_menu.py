@@ -23,7 +23,6 @@ s3.menu_help = [ T("Help"), True, "#",
     ]
 
 # Auth Menu (available in all screens)
-
 if not auth.is_logged_in():
 
     login_next = URL(args=request.args, vars=request.vars)
@@ -84,7 +83,6 @@ else:
         ]
 
 
-
 # Menu for Admin module
 # (defined here as used in several different Controller files)
 admin_menu_messaging = [
@@ -133,57 +131,57 @@ admin_menu_options = [
 # NB This is just a default menu - most deployments will customise this
 s3.menu_modules = []
 # Home always 1st
-_module = deployment_settings.modules["default"]
-s3.menu_modules.append([_module.name_nice, False,
-                        URL(c="default", f="index")])
+#_module = deployment_settings.modules["default"]
+s3.menu_modules.append(["", False,
+                        URL(c="default", f="item_entity")])
 
 # Modules to hide due to insufficient permissions
-hidden_modules = auth.permission.hidden_modules()
+#hidden_modules = auth.permission.hidden_modules()
 
 # The Modules to display at the top level (in order)
-for module_type in [1, 2, 3, 4, 5, 6]:
-    for module in deployment_settings.modules:
-        if module in hidden_modules:
-            continue
-        _module = deployment_settings.modules[module]
-        if (_module.module_type == module_type):
-            if not _module.access:
-                s3.menu_modules.append([_module.name_nice, False,
-                                        aURL(c=module, f="index")])
-            else:
-                authorised = False
-                groups = re.split("\|", _module.access)[1:-1]
-                for group in groups:
-                    if s3_has_role(group):
-                        authorised = True
-                if authorised == True:
-                    s3.menu_modules.append([_module.name_nice, False,
-                                            URL(c=module, f="index")])
+#for module_type in [1, 2, 3, 4, 5, 6]:
+#    for module in deployment_settings.modules:
+#        if module in hidden_modules:
+#            continue
+#        _module = deployment_settings.modules[module]
+#        if (_module.module_type == module_type):
+#            if not _module.access:
+#                s3.menu_modules.append([_module.name_nice, False,
+#                                        aURL(c=module, f="index")])
+#            else:
+#                authorised = False
+#                groups = re.split("\|", _module.access)[1:-1]
+#                for group in groups:
+#                    if s3_has_role(group):
+#                        authorised = True
+#                if authorised == True:
+#                    s3.menu_modules.append([_module.name_nice, False,
+#                                            URL(c=module, f="index")])
 
 # Modules to display off the 'more' menu
-modules_submenu = []
-for module in deployment_settings.modules:
-    if module in hidden_modules:
-        continue
-    _module = deployment_settings.modules[module]
-    if (_module.module_type == 10):
-        if not _module.access:
-            modules_submenu.append([_module.name_nice, False,
-                                    aURL(c=module, f="index")])
-        else:
-            authorised = False
-            groups = re.split("\|", _module.access)[1:-1]
-            for group in groups:
-                if s3_has_role(group):
-                    authorised = True
-            if authorised == True:
-                modules_submenu.append([_module.name_nice, False,
-                                        URL(c=module, f="index")])
-if modules_submenu:
-    # Only show the 'more' menu if there are entries in the list
-    module_more_menu = ([T("more"), False, "#"])
-    module_more_menu.append(modules_submenu)
-    s3.menu_modules.append(module_more_menu)
+#modules_submenu = []
+#for module in deployment_settings.modules:
+#    if module in hidden_modules:
+#        continue
+#    _module = deployment_settings.modules[module]
+#    if (_module.module_type == 10):
+#        if not _module.access:
+#            modules_submenu.append([_module.name_nice, False,
+#                                    aURL(c=module, f="index")])
+#        else:
+#            authorised = False
+#            groups = re.split("\|", _module.access)[1:-1]
+#            for group in groups:
+#                if s3_has_role(group):
+#                    authorised = True
+#            if authorised == True:
+#                modules_submenu.append([_module.name_nice, False,
+#                                        URL(c=module, f="index")])
+#if modules_submenu:
+#    # Only show the 'more' menu if there are entries in the list
+#    module_more_menu = ([T("more"), False, "#"])
+#    module_more_menu.append(modules_submenu)
+#    s3.menu_modules.append(module_more_menu)
 
 # Admin always last
 if s3_has_role(ADMIN):
@@ -328,8 +326,65 @@ else:
             - on_editor : extensions for EDITOR role
         @NOTE: subject to change depending on changes in S3Menu / requirements
 """
+
+default_menu = {
+        "menu": [
+            [T("Items"), False, aURL(f="item_entity"), [
+                [T("View All Available Items"), False, aURL(f="item_entity")],
+                [T("Search Stock Items"), False, aURL(f="inv_item", args="search")],
+                [T("Search Orders"), False, aURL(f="recv", args="search")],
+                [T("Catalog Items"), False, aURL(f="item")],
+                [T("Upload Spreadsheet"), False, aURL(p="create",
+                                                      f="import_file",
+                                                      args="create")],
+            ]],
+            #[T("Stock Items"), False, aURL(f="inv_item"), [
+            #    [T("New Stock Item"), False, aURL(p="create", f="inv_item", args="create")],
+            #    [T("View Stock Items"), False, aURL(f="inv_item")],
+            #]],
+            #[T("Orders"), False, aURL(f="recv"), [
+            #    [T("New Order"), False, aURL(p="create", f="recv", args="create")],
+            #    [T("View Orders"), False, aURL(f="recv")],
+            #]],
+            #[T("Planned Procurements"), False, aURL(f="plan"), [
+            #    [T("New Procurement Plan"), False, aURL(p="create", f="plan", args="create")],
+            #    [T("View Procurement Plans"), False, aURL(f="plan")],
+            #   #[T("Search Procurement Plans"), False, aURL(f="plan", args="search")],
+            #]],
+            [T("Offices"), False, aURL(f="office"), [
+                [T("New Office"), False, aURL(p="create", f="office", args="create")],
+                [T("View Offices"), False, aURL(f="office")],
+                [T("Search Offices"), False, aURL(f="office", args="search")],
+            ]],
+            [T("Organizations"), False, aURL(f="organisation"), [
+                [T("New Organization"), False, aURL(p="create", f="organisation", args="create")],
+                [T("View Organizations"), False, aURL(f="organisation")],
+                [T("Search Organizations"), False, aURL(f="organisation", args="search")],
+            ]],
+            #[T("Suppliers"), False, aURL(f="supplier"), [
+            #    [T("New Supplier"), False, aURL(p="create", f="supplier", args="create")],
+            #    [T("View Suppliers"), False, aURL(f="supplier")],
+            #    #[T("Search Suppliers"), False, aURL(f="supplier", args="search")],
+            #]],
+        ]
+    }
+
+if not s3_has_role(EDITOR):
+    # Show a simplified menu for the Reader role
+    default_menu = {
+        "menu": [
+            [T("All Items"), False, aURL(f="item_entity"), [
+                [T("View All Items"), False, aURL(f="item_entity")],
+            ]]
+        ]
+    }
+
 s3_menu_dict = {
 
+    # DEFAULT Controller
+    # -------------------------------------------------------------------------
+    "default": default_menu,
+    
     # ASSESS Controller
     # -------------------------------------------------------------------------
     "assess": {
@@ -974,30 +1029,31 @@ s3_menu_dict = {
 
     # ORG / Organization Registry
     # -------------------------------------------------------------------------
-    "org": {
-        "menu": [
-                [T("Organizations"), False, aURL(c="org", f="organisation"), [
-                    [T("New"), False,
-                     aURL(p="create", c="org", f="organisation",
-                          args="create")],
-                    [T("List All"), False, aURL(c="org", f="organisation")],
-                    [T("Search"), False, aURL(c="org", f="organisation",
-                                              args="search")],
-                    [T("Import"), False, aURL(c="org", f="organisation",
-                                              args="import.xml")]
-                ]],
-                [T("Offices"), False, aURL(c="org", f="office"), [
-                    [T("New"), False,
-                     aURL(p="create", c="org", f="office",
-                          args="create")],
-                    [T("List All"), False, aURL(c="org", f="office")],
-                    [T("Search"), False, aURL(c="org", f="office",
-                                              args="search")],
-                    [T("Import"), False, aURL(c="org", f="office",
-                                              args="import.xml")]
-                ]],
-            ],
-    },
+    "org": default_menu,
+    #    {
+    #    "menu": [
+    #            [T("Organizations"), False, aURL(c="org", f="organisation"), [
+    #                [T("New"), False,
+    #                 aURL(p="create", c="org", f="organisation",
+    #                      args="create")],
+    #                [T("List All"), False, aURL(c="org", f="organisation")],
+    #                [T("Search"), False, aURL(c="org", f="organisation",
+    #                                          args="search")],
+    #                [T("Import"), False, aURL(c="org", f="organisation",
+    #                                          args="import.xml")]
+    #            ]],
+    #            [T("Offices"), False, aURL(c="org", f="office"), [
+    #                [T("New"), False,
+    #                 aURL(p="create", c="org", f="office",
+    #                      args="create")],
+    #                [T("List All"), False, aURL(c="org", f="office")],
+    #                [T("Search"), False, aURL(c="org", f="office",
+    #                                          args="search")],
+    #                [T("Import"), False, aURL(c="org", f="office",
+    #                                          args="import.xml")]
+    #            ]],
+    #        ],
+    #},
 
     # PATIENT / Patient Tracking Module
     # -------------------------------------------------------------------------

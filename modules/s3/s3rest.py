@@ -368,9 +368,9 @@ class S3RequestManager(object):
         if record is not None:
             tablename = str(field.table)
             if tablename in record and isinstance(record[tablename], Row):
-                text = val = record[tablename][field.name]
+                text = val = record[tablename][fname]
             else:
-                text = val = record[field.name]
+                text = val = record[fname]
         else:
             text = val = value
 

@@ -46,6 +46,7 @@ __all__ = ["S3HiddenWidget",
            "S3SiteAutocompleteWidget",
            "S3LocationSelectorWidget",
            "S3LocationDropdownWidget",
+           "S3SiteLocationDropdownWidget",
            #"S3CheckboxesWidget",
            "S3MultiSelectWidget",
            "S3ACLWidget",
@@ -1138,6 +1139,70 @@ class S3LocationDropdownWidget(FormWidget):
                                      table.id,
                                      cache = current.gis.cache)
         opts = []
+        for location in locations:
+            opts.append(OPTION(location.name, _value=location.id))
+            if not value and default and location.name == default:
+                value = location.id
+        locations = locations.as_dict()
+        attr_dropdown = OptionsWidget._attributes(field,
+                                                  dict(_type = "int",
+                                                       value = value))
+        requires = IS_IN_SET(locations)
+        if empty:
+            requires = IS_NULL_OR(requires)
+        attr_dropdown["requires"] = requires
+
+        attr_dropdown["represent"] = \
+            lambda id: locations["id"]["name"] or UNKNOWN_OPT
+
+        return TAG[""](
+                        SELECT(*opts, **attr_dropdown),
+                        requires=field.requires
+                      )
+
+# -----------------------------------------------------------------------------
+class S3SiteLocationDropdownWidget(FormWidget):
+    """
+        Renders a dropdown for an Lx level of location hierarchy, but actually
+        creates/updates a non-Lx location
+
+        This allows a site to be seen as an Lx location
+        
+        For HELIOS, this allows an 'Office' to be located at L0 (country) level
+    """
+
+    def __init__(self, level="L0", default=None, empty=False):
+        """ Set Defaults """
+        self.level = level
+        self.default = default
+        self.empty = empty
+
+    def __call__(self, field, value, **attributes):
+
+        level = self.level
+        default = self.default
+        empty = self.empty
+
+        db = current.db
+        table = db.gis_location
+        query = (table.level == level)
+        locations = db(query).select(table.name,
+                                     table.id,
+                                     cache = current.gis.cache)
+        opts = []
+        if value:
+            gis = current.gis
+            # @ToDo: Handle non-strict hierarchies
+            if level == "L0":
+                value = gis.get_parents(value)[0].id
+            elif level == "L1":
+                value = gis.get_parents(value)[1].id
+            elif level == "L2":
+                value = gis.get_parents(value)[2].id
+            elif level == "L3":
+                value = gis.get_parents(value)[3].id
+            elif level == "L4":
+                value = gis.get_parents(value)[4].id
         for location in locations:
             opts.append(OPTION(location.name, _value=location.id))
             if not value and default and location.name == default:

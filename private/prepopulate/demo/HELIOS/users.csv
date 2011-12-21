@@ -1,0 +1,4 @@
+"First Name","Last Name","Email","Password","Role","Organisation"
+"Administrator",,"admin@helios-foundation.org","eden","ADMIN",
+"Editor",,"edit@helios-foundation.org","edit","EDITOR",
+"Reader",,"read@helios-foundation.org","read",,

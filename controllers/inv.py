@@ -387,7 +387,7 @@ def recv_process():
         session.error = T("This shipment has already been received.")
 
     if session.error:
-        redirect(URL(c = "inv",
+        redirect(URL(c = "default",
                      f = "recv",
                      args = [recv_id]))
 
@@ -465,7 +465,7 @@ def recv_process():
     (prefix, resourcename, id) = s3mgr.model.get_instance(db.org_site,
                                                           site_id)
 
-    redirect(URL(c = prefix,
+    redirect(URL(c = "default",
                  f = resourcename,
                  args = [id, "inv_item"],
                  vars = dict(show_inv="True")))
@@ -487,7 +487,7 @@ def recv_cancel():
         session.error = T("This shipment has not been received - it has NOT been canceled because can still be edited.")
 
     if session.error:
-        redirect(URL(c = "inv",
+        redirect(URL(c = "default",
                      f = "recv",
                      args = [recv_id]))
 
@@ -580,7 +580,7 @@ def recv_cancel():
 
     session.confirmation = T("Received Shipment canceled and items removed from Inventory")
 
-    redirect(URL(c = "inv",
+    redirect(URL(c = "default",
                  f = "recv",
                  args = [recv_id]))
 

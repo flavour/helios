@@ -89,6 +89,24 @@ def org_sector_represent(opt):
 def org_sector_deduplicate(item):
     """ Import item de-duplication """
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     if item.id:
         return
     if item.tablename in ("org_sector", "org_subsector"):
@@ -241,13 +259,21 @@ table = db.define_table(tablename,
                                              _title="%s|%s" % (T("Acronym"),
                                                                T("Acronym of the organization's name, eg. IFRC.")))),
                         Field("type", "integer", label = T("Type"),
+                              readable = False,
+                              writable = False,
                               requires = IS_NULL_OR(IS_IN_SET(organisation_type_opts)),
                               represent = lambda opt: \
                                 organisation_type_opts.get(opt, UNKNOWN_OPT)),
                         sector_id(),
                         #Field("registration", label=T("Registration")),    # Registration Number
-                        Field("region", label=T("Region")),
-                        Field("country", "string", length=2,
+                        Field("region",
+                              readable = False,
+                              writable = False,
+                              label=T("Region")),
+                        Field("country",
+                              "string", length=2,
+                              readable = False,
+                              writable = False,
                               label = T("Home Country"),
                               requires = IS_NULL_OR(IS_IN_SET_LAZY(
                                   lambda: gis.get_countries(key_type="code"),
@@ -255,13 +281,19 @@ table = db.define_table(tablename,
                               represent = lambda code: \
                                   gis.get_country(code, key_type="code") or UNKNOWN_OPT),
                         Field("website", label = T("Website"),
+                              readable = False,
+                              writable = False,
                               requires = IS_NULL_OR(IS_URL()),
                               represent = s3_url_represent),
                         Field("twitter",                        # deprecated by contact component
+                              readable = False,
+                              writable = False,
                               comment = DIV( _class="tooltip",
                                              _title="%s|%s" % (T("Twitter"),
                                                                T("Twitter ID or #hashtag")))),
                         Field("donation_phone", label = T("Donation Phone #"),
+                              readable = False,
+                              writable = False,
                               requires = IS_NULL_OR(s3_phone_requires),
                               comment = DIV( _class="tooltip",
                                              _title="%s|%s" % (T("Donation Phone #"),
@@ -660,28 +692,31 @@ def org_site_represent(id, default_label="[no label]", link = True):
     query = (table.site_id == id)
     if instance_type == "org_office":
         record = db(query).select(table.id,
-                                  table.type,
+                                  #table.type,
                                   table.name, limitby=(0, 1)).first()
     else:
         record = db(query).select(table.id,
                                   table.name, limitby=(0, 1)).first()
 
-    instance_type_nice = site_table.instance_type.represent(instance_type)
+    #instance_type_nice = site_table.instance_type.represent(instance_type)
 
-    try:
-        if instance_type == "org_office" and record.type == 5:
-             instance_type_nice = T("Warehouse")
-    except:
-        pass
+    #try:
+    #    if instance_type == "org_office" and record.type == 5:
+    #        instance_type_nice = T("Warehouse")
+    #except:
+    #    pass
 
     if record:
-        site_str = "%s (%s)" % (record.name, instance_type_nice)
+        #site_str = "%s (%s)" % (record.name, instance_type_nice)
+        site_str = record.name
     else:
         # Since name is notnull for all types so far, this won't be reached.
-        site_str = "[site %d] (%s)" % (id, instance_type_nice)
+        #site_str = "[site %d] (%s)" % (id, instance_type_nice)
+        site_str = "[site %d]" % (id)
 
     if link and record:
         c, f = instance_type.split("_")
+        c = "default" # HELIOS
         site_str = A(site_str,
                      _href = URL(c=c, f=f,
                                  args = [record.id],
@@ -760,7 +795,7 @@ room_id = S3ReusableField("room_id", db.org_room, sortby="name",
                                                                      limitby=(0, 1)).first().name] or [NONE])[0],
                           label = T("Room"),
                           comment = room_comment,
-                          ondelete = "RESTRICT")
+                          ondelete = "CASCADE")
 
 # =============================================================================
 # Offices
@@ -796,29 +831,52 @@ table = db.define_table(tablename,
                         Field("code",
                               length=10,
                               # Deployments that don't wants office codes can hide them
-                              #readable=False,
-                              #writable=False,
+                              readable=False,
+                              writable=False,
                               # Mayon compatibility
                               # @ToDo: Deployment Setting to add validator to make these unique
                               #notnull=True,
                               #unique=True,
                               label=T("Code")),
-                        organisation_id(widget = S3OrganisationAutocompleteWidget(default_from_profile = True)),
+                        organisation_id(
+                            #widget = S3OrganisationAutocompleteWidget(default_from_profile = True),
+                            empty = False
+                            ),
                         Field("type", "integer", label = T("Type"),
+                              readable=False,
+                              writable=False,
                               requires = IS_NULL_OR(IS_IN_SET(org_office_type_opts)),
                               represent = lambda opt: \
                                 org_office_type_opts.get(opt, UNKNOWN_OPT)),
                         Field("office_id", "reference org_office", # This form of hierarchy may not work on all Databases
+                              readable=False,
+                              writable=False,
                               label = T("Parent Office"),
                               comment = office_comment),
-                        location_id(),
+                        location_id(
+                            # HELIOS locates offices only to the Country-level
+                            requires=IS_ONE_OF(db, "gis_location.id",
+                                               "%(name)s",
+                                               filterby="level",
+                                               filter_opts=["L0"],
+                                               orderby="gis_location.name"),
+                            label = T("Country"),
+                            widget = S3SiteLocationDropdownWidget()),
                         Field("phone1", label = T("Phone 1"),
+                              readable = False,
+                              writable = False,
                               requires = IS_NULL_OR(s3_phone_requires)),
                         Field("phone2", label = T("Phone 2"),
+                              readable = False,
+                              writable = False,
                               requires = IS_NULL_OR(s3_phone_requires)),
                         Field("email", label = T("Email"),
+                              readable = False,
+                              writable = False,
                               requires = IS_NULL_OR(IS_EMAIL())),
                         Field("fax", label = T("Fax"),
+                              readable = False,
+                              writable = False,
                               requires = IS_NULL_OR(s3_phone_requires)),
                         # @ToDo: Calculate automatically from org_staff (but still allow manual setting for a quickadd)
                         #Field("international_staff", "integer",
@@ -834,12 +892,17 @@ table = db.define_table(tablename,
                         #Field("vehicle_types", label = T("Vehicle Types")),
                         #Field("equipment", label = T("Equipment")),
                         Field("obsolete", "boolean",
+                              readable = False,
+                              writable = False,
                               label = T("Obsolete"),
                               represent = lambda bool: \
                                 (bool and [T("Obsolete")] or [NONE])[0],
                               default = False),
                         #document_id(),  # Better to have multiple Documents on a Tab
-                        s3_comments(),
+                        s3_comments(label=T("Contacts"),
+                                 comment=DIV(_class="tooltip",
+                                             _title="%s|%s" % (T("Contacts"),
+                                                               T("Freeform text field to put information in as to whom & how to contact for information on whether inventory items could be loaned/transferred.")))),
                         *(address_fields() + s3_meta_fields()))
 
 # Field settings
@@ -903,8 +966,72 @@ office_id = S3ReusableField("office_id", db.org_office,
                                                                limitby=(0, 1)).first().name] or [NONE])[0],
                 label = T("Office"),
                 comment = office_comment,
-                ondelete = "RESTRICT")
+                ondelete = "CASCADE")
 
+# -----------------------------------------------------------------------------
+def office_ondelete(row):
+    """
+        Delete all:
+        - inv_inv_item
+        - inv_recv_item
+        - inv_recv
+        - proc_plan
+        - proc_plan_item
+        - org_office
+    """
+
+    otable = db.org_office
+    query = (otable.id == row.id)
+    office = db(query).select(otable.deleted_fk,
+                              limitby=(0, 1)).first()
+
+    if not office:
+        session.error = T("Office not found")
+        return
+
+    try:
+        fk = json.loads(office.deleted_fk)
+        site_id = fk["site_id"]
+    except:
+        # either no JSON or no site_id
+        return
+
+    if site_id:
+        # Remove all inv_inv_item with that site_id
+        itable = db.inv_inv_item
+        ondelete = s3mgr.model.get_config("inv_inv_item", "ondelete")
+        resource = s3mgr.define_resource("inv", "inv_item",
+                                         filter=itable.site_id == site_id)
+        resource.delete(ondelete=ondelete, cascade=True)
+
+        # Remove all inv_inv_recv with that site_id
+        itable = db.inv_recv
+        ondelete = s3mgr.model.get_config("inv_recv", "ondelete")
+        resource = s3mgr.define_resource("inv", "recv",
+                                         filter=itable.site_id == site_id)
+        resource.delete(ondelete=ondelete, cascade=True)
+
+        if deployment_settings.has_module("proc"):
+            # Remove all proc_plan with that site_id
+            itable = db.proc_plan
+            ondelete = s3mgr.model.get_config("proc_plan", "ondelete")
+            resource = s3mgr.define_resource("proc", "plan",
+                                             filter=itable.site_id == site_id)
+            resource.delete(ondelete=ondelete, cascade=True)
+
+        # Remove the org
+        # This may be impossible if there are other records referencing
+        # the organisation record, because organisation_id has ondelete=RESTRICT
+        # However, this method will not throw any error in this case, but
+        # just not delete (return value of resource.delete would be 0, though)
+        #ondelete = s3mgr.model.get_config("org_organisation", "ondelete")
+        #resource = s3mgr.define_resource("org", "organisation", id=row.organisation_id)
+        #resource.delete(ondelete=ondelete)
+
+        s3.crud_strings[otable._tablename].update(
+            msg_record_deleted = T("Office and all associated records successfully deleted"))
+
+# -----------------------------------------------------------------------------
 def org_office_deduplicate(item):
     """
         Import item deduplication, match by name and location_id (if given)
@@ -946,19 +1073,21 @@ s3mgr.model.add_component(table,
 
 s3mgr.configure(tablename,
                 super_entity=(db.pr_pentity, db.org_site),
+                ondelete=office_ondelete,
                 onvalidation=address_onvalidation,
                 deduplicate=org_office_deduplicate,
                 list_fields=[ "id",
-                              "name",
+                              #"name",
                               "organisation_id",   # Filtered in Component views
-                              "type",
+                              #"type",
                               "L0",
-                              "L1",
-                              "L2",
-                              "L3",
+                              #"L1",
+                              #"L2",
+                              #"L3",
                               #"L4",
-                              "phone1",
-                              "email"
+                              #"phone1",
+                              #"email",
+                              "comments"
                             ])
 
 # -----------------------------------------------------------------------------
@@ -998,24 +1127,27 @@ def office_rheader(r, tabs=[]):
                 org_name = None
 
             rheader = DIV(TABLE(
-                          TR(
-                             TH("%s: " % T("Name")),
-                             office.name,
-                             TH("%s: " % T("Type")),
-                             org_office_type_opts.get(office.type,
-                                                      UNKNOWN_OPT),
-                             ),
+                          #TR(
+                             #TH("%s: " % T("Name")),
+                             #office.name,
+                             #TH("%s: " % T("Type")),
+                             #org_office_type_opts.get(office.type,
+                             #                        UNKNOWN_OPT),
+                             #),
                           TR(
                              TH("%s: " % T("Organization")),
                              org_name,
-                             TH("%s: " % T("Location")),
+                             #TH("%s: " % T("Location")),
                              gis_location_represent(office.location_id),
+                             office.L0,
                              ),
                           TR(
-                             TH("%s: " % T("Email")),
-                             office.email,
-                             TH("%s: " % T("Telephone")),
-                             office.phone1,
+                             TH("%s: " % T("Contacts")),
+                             office.comments
+                             #TH("%s: " % T("Email")),
+                             #office.email,
+                             #TH("%s: " % T("Telephone")),
+                             #office.phone1,
                              ),
                           #TR(TH(A(T("Edit Office"),
                           #        _href=URL(c="org", f="office",

@@ -165,9 +165,14 @@ if deployment_settings.has_module("inv") or \
                                 #Field("level", "integer"),
                                 Field("parent_item_category_id",
                                       "reference supply_item_category",
+                                      readable=False,
+                                      writable=False,
                                       label = T("Parent"),
                                       ondelete = "RESTRICT"),
-                                Field("code", length=16),
+                                Field("code",
+                                      readable=False,
+                                      writable=False,
+                                      length=16),
                                 Field("name", length=128,
                                       required = True),
                                 Field("can_be_asset", "boolean",
@@ -385,7 +390,7 @@ if deployment_settings.has_module("inv") or \
             if show_link:
                 return A(represent,
                          _href = URL( r = local_request,
-                                      c = "supply",
+                                      c = "default",
                                       f = "item",
                                       args = [id]
                                      )
@@ -718,14 +723,14 @@ if deployment_settings.has_module("inv") or \
         catalog_item_search = s3base.S3Search(
             simple=( catalog_item_search_simple_widget("simple") ),
             advanced=( catalog_item_search_simple_widget("advanced"),
-                       s3base.S3SearchOptionsWidget(
-                         name="catalog_item_search_catalog",
-                         label=T("Catalog"),
-                         comment=T("Search for an item by catalog."),
-                         field=["catalog_id"],
-                         represent ="%(name)s",
-                         cols = 3
-                       ),
+                       # s3base.S3SearchOptionsWidget(
+                         # name="catalog_item_search_catalog",
+                         # label=T("Catalog"),
+                         # comment=T("Search for an item by catalog."),
+                         # field=["catalog_id"],
+                         # represent ="%(name)s",
+                         # cols = 3
+                       # ),
                        s3base.S3SearchOptionsWidget(
                          name="catalog_item_search_category",
                          label=T("Category"),
@@ -735,14 +740,14 @@ if deployment_settings.has_module("inv") or \
                             item_category_represent(id, use_code=False),
                          cols = 3
                        ),
-                       s3base.S3SearchOptionsWidget(
-                         name="catalog_item_search_brand",
-                         label=T("Brand"),
-                         comment=T("Search for an item by brand."),
-                         field=["item_id$brand_id"],
-                         represent ="%(name)s",
-                         cols = 3
-                       ),
+                       # s3base.S3SearchOptionsWidget(
+                         # name="catalog_item_search_brand",
+                         # label=T("Brand"),
+                         # comment=T("Search for an item by brand."),
+                         # field=["item_id$brand_id"],
+                         # represent ="%(name)s",
+                         # cols = 3
+                       # ),
             )
         )
 
@@ -827,23 +832,23 @@ if deployment_settings.has_module("inv") or \
                                 *s3_meta_fields())
 
         # CRUD strings
-        ADD_ITEM_PACK = T("Add Item Pack")
-        LIST_ITEM_PACK = T("List Item Packs")
+        ADD_ITEM_PACK = T("Add Unit of Measure")
+        LIST_ITEM_PACK = T("List Units of Measure")
         s3.crud_strings[tablename] = Storage(
             title_create = ADD_ITEM_PACK,
-            title_display = T("Item Pack Details"),
+            title_display = T("Unit of Measure Details"),
             title_list = LIST_ITEM_PACK,
-            title_update = T("Edit Item Pack"),
-            title_search = T("Search Item Packs"),
-            subtitle_create = T("Add New Item Pack"),
-            subtitle_list = T("Item Packs"),
+            title_update = T("Edit Unit of Measure"),
+            title_search = T("Search Units of Measure"),
+            subtitle_create = T("Add Unit of Measure"),
+            subtitle_list = T("Units of Measure"),
             label_list_button = LIST_ITEM_PACK,
             label_create_button = ADD_ITEM_PACK,
-            label_delete_button = T("Delete Item Pack"),
-            msg_record_created = T("Item Pack added"),
-            msg_record_modified = T("Item Pack updated"),
-            msg_record_deleted = T("Item Pack deleted"),
-            msg_list_empty = T("No Item Packs currently registered"))
+            label_delete_button = T("Delete Unit of Measure"),
+            msg_record_created = T("Unit of Measure added"),
+            msg_record_modified = T("Unit of Measure updated"),
+            msg_record_deleted = T("Unit of Measure deleted"),
+            msg_list_empty = T("No Units of Measure currently registered"))
 
         # ---------------------------------------------------------------------
         def item_pack_represent(id):
@@ -880,10 +885,10 @@ if deployment_settings.has_module("inv") or \
                                          # filter_opts = [....],
                                          ),
                     represent = item_pack_represent,
-                    label = T("Pack"),
+                    label = T("Unit of Measure"),
                     comment = DIV(DIV( _class="tooltip",
-                                       _title="%s|%s" % (T("Item Packs"),
-                                                         T("The way in which an item is normally distributed"))),
+                                       _title="%s|%s" % (T("Unit of Measure"),
+                                                         T("The way in which the item is being distributed"))),
                                   A( ADD_ITEM_PACK,
                                      _class="colorbox",
                                      _href=URL(c="supply", f="item_pack",
@@ -1223,7 +1228,7 @@ S3FilterFieldChange({
                     return category
 
                 def country(self):
-                    country = NONE
+                    record = None
                     etable = db.supply_item_entity
                     instance_type = self.supply_item_entity.instance_type
                     if instance_type == "inv_inv_item":
@@ -1238,9 +1243,8 @@ S3FilterFieldChange({
                              # We are being instantiated inside one of the other methods
                             return None
                         record = db(query).select(otable.L0,
+                                                  otable.location_id,
                                                   limitby=(0, 1)).first()
-                        if record:
-                            country = record.L0 or T("Unknown")
                     elif instance_type == "inv_recv_item":
                         tablename = instance_type
                         s3mgr.load(instance_type)
@@ -1255,9 +1259,8 @@ S3FilterFieldChange({
                              # We are being instantiated inside one of the other methods
                             return None
                         record = db(query).select(otable.L0,
+                                                  otable.location_id,
                                                   limitby=(0, 1)).first()
-                        if record:
-                            country = record.L0 or T("Unknown")
                     elif instance_type == "proc_plan_item":
                         tablename = instance_type
                         s3mgr.load(instance_type)
@@ -1272,13 +1275,25 @@ S3FilterFieldChange({
                              # We are being instantiated inside one of the other methods
                             return None
                         record = db(query).select(otable.L0,
+                                                  otable.location_id,
                                                   limitby=(0, 1)).first()
-                        if record:
-                            country = record.L0 or T("Unknown")
                     else:
                         # @ToDo: Assets and req_items
                         return NONE
-                    return country
+                    if record:
+                        if request.extension == "xls" or \
+                           request.extension == "pdf":
+                            location = record.location_id
+                            if location:
+                                country = gis.get_parent_country(location, key_type="code")
+                                return country
+                            else:
+                                return T("Unknown")
+                        else:
+                            country = record.L0 or T("Unknown")
+                            return country
+                    else:
+                        return NONE
 
                 def organisation(self):
                     organisation = NONE
@@ -1478,7 +1493,7 @@ S3FilterFieldChange({
                             insertable = False,
                             # @ToDo: Allow VirtualFields to be used to Group Reports
                             #report_groupby = "category",
-                            list_fields = [(T("Category"), "category"),
+                            list_fields = [(T("Code Share"), "category"),
                                            "item_id",
                                            "quantity",
                                            (T("Unit of Measure"), "item_pack_id"),
@@ -1507,7 +1522,7 @@ S3FilterFieldChange({
                     select = SELECT(_multiple="multiple", _id="category_dropdown")
                     for category in categories:
                         select.append(OPTION(category.name, _name=category.id))
-                    rheader.append(DIV(B("%s:" % T("Filter by Category")),
+                    rheader.append(DIV(B("%s:" % T("Filter by Code Share")),
                                        BR(),
                                        select,
                                        _class="rfilter"))

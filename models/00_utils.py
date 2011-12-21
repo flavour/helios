@@ -173,7 +173,7 @@ def comments_represent(text, showlink=True):
     if len(text) < 80:
         return text
     elif not showlink:
-        return "%s..." % text[:76]
+        return "%s..." % text[:36]
     else:
         import uuid
         unique =  uuid.uuid4()
@@ -183,7 +183,7 @@ def comments_represent(text, showlink=True):
                             _class="hidden popup",
                             _onmouseout="$('#%s').hide();" % unique
                            ),
-                        A("%s..." % text[:76],
+                        A("%s..." % text[:36],
                           _onmouseover="$('#%s').removeClass('hidden').show();" % unique,
                          ),
                        )

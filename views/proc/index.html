@@ -1,0 +1,17 @@
+{{extend "layout.html"}}
+<div id='home'>
+<h1>{{=T("Procurement")}}</h1>
+<div class='col2left'>
+<h3>{{=T("Procurement Plans")}}:</h3>
+<ul>
+  <li><a href='{{=URL(c="proc", f="plan", args="create")}}'>{{=T("Create New Procurement Plan")}}</a>
+  <li><a href='{{=URL(c="proc", f="plan")}}'>{{=T("List All Procurement Plans")}}</a>
+  <li><a href='{{=URL(c="proc", f="plan", args="search")}}'>{{=T("Search Procurement Plans")}}</a>
+</ul>
+<h3>{{=T("Suppliers")}}</h3>
+<ul>
+  <li><a href='{{=URL(c="proc", f="supplier", args="create")}}'>{{=T("Create New Supplier")}}</a>
+  <li><a href='{{=URL(c="proc", f="supplier")}}'>{{=T("List All Suppliers")}}</a>
+</ul>
+</div>
+</div>

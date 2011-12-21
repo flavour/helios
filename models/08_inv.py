@@ -74,7 +74,8 @@ if deployment_settings.has_module("inv"):
         tablename = "inv_inv_item"
         table = db.define_table(tablename,
                                 super_link(db.org_site, # site_id
-                                           label = T("Inventory"),
+                                           #label = T("Inventory"),
+                                           label = T("Office"),
                                            default = auth.user.site_id if auth.is_logged_in() else None,
                                            readable = True,
                                            writable = True,
@@ -96,9 +97,13 @@ if deployment_settings.has_module("inv"):
                                       notnull = True),
                                 Field("pack_value",
                                        "double",
+                                       readable=False,
+                                       writable=False, 
                                        label = T("Value per Pack")),
                                 # @ToDo: Move this into a Currency Widget for the pack_value field
-                                currency_type("currency"),
+                                currency_type("currency",
+                                              readable=False,
+                                              writable=False),
                                 #Field("pack_quantity",
                                 #      "double",
                                 #      compute = record_pack_quantity), # defined in 06_supply
@@ -114,24 +119,24 @@ if deployment_settings.has_module("inv"):
         table.virtualfields.append(item_pack_virtualfields(tablename = "inv_inv_item"))
 
         # CRUD strings
-        INV_ITEM = T("Inventory Item")
-        ADD_INV_ITEM = T("Add Item to Inventory")
-        LIST_INV_ITEMS = T("List Items in Inventory")
+        INV_ITEM = T("Stock Item")
+        ADD_INV_ITEM = T("Add Item to Stock")
+        LIST_INV_ITEMS = T("List Items in Stock")
         s3.crud_strings[tablename] = Storage(
             title_create = ADD_INV_ITEM,
-            title_display = T("Inventory Item Details"),
+            title_display = T("Stock Item Details"),
             title_list = LIST_INV_ITEMS,
-            title_update = T("Edit Inventory Item"),
-            title_search = T("Search Inventory Items"),
+            title_update = T("Edit Stock Item"),
+            title_search = T("Search Stock Items"),
             subtitle_create = ADD_INV_ITEM,
-            subtitle_list = T("Inventory Items"),
+            subtitle_list = T("Stock Items"),
             label_list_button = LIST_INV_ITEMS,
             label_create_button = ADD_INV_ITEM,
-            label_delete_button = T("Remove Item from Inventory"),
-            msg_record_created = T("Item added to Inventory"),
-            msg_record_modified = T("Inventory Item updated"),
-            msg_record_deleted = T("Item removed from Inventory"),
-            msg_list_empty = T("No Items currently registered in this Inventory"))
+            label_delete_button = T("Remove Item from Stock"),
+            msg_record_created = T("Item added to Stock"),
+            msg_record_modified = T("Stock Item updated"),
+            msg_record_deleted = T("Item removed from Stock"),
+            msg_list_empty = T("No Items currently in Stock"))
 
         def inv_item_represent(id):
             itable = db.inv_inv_item
@@ -184,13 +189,14 @@ $(document).ready(function() {
                         label=T("Search"),
                         comment=T("Search for an item by text."),
                         field=[ "item_id$name",
+                                "item_id$code",
                                 #"item_id$category_id$name",
                                 #"site_id$name"
                                 ]
                       ),
                       s3base.S3SearchOptionsWidget(
                         name="recv_search_site",
-                        label=T("Facility"),
+                        label=T("Office"),
                         field=["site_id"],
                         represent ="%(name)s",
                         comment=T("If none are selected, then all are searched."),
@@ -260,25 +266,9 @@ $(document).ready(function() {
                                       label = T("Date Expected"),
                                       represent = s3_date_represent
                                       ),
-                                Field("date",
-                                      "date",
-                                      label = T("Date Received"),
-                                      writable = False,
-                                      represent = s3_date_represent
-                                      #readable = False # unless the record is locked
-                                      ),
-                                Field("type",
-                                      "integer",
-                                      requires = IS_NULL_OR(IS_IN_SET(inv_recv_type)),
-                                      represent = lambda opt: inv_recv_type.get(opt, UNKNOWN_OPT),
-                                      label = T("Type"),
-                                      default = 0,
-                                      ),
-                                person_id(name = "recipient_id",
-                                          label = T("Received By"),
-                                          default = s3_logged_in_person()),
                                 super_link(db.org_site,
-                                           label=T("By Facility"),
+                                           #label=T("By Facility"),
+                                           label=T("For Office"),
                                            default = auth.user.site_id if auth.is_logged_in() else None,
                                            readable = True,
                                            writable = True,
@@ -288,14 +278,39 @@ $(document).ready(function() {
                                            #              _title="%s|%s" % (T("By Inventory"),
                                            #                                T("Enter some characters to bring up a list of possible matches"))),
                                            represent=org_site_represent),
+                                Field("date",
+                                      "date",
+                                      label = T("Date Received"),
+                                      readable = False,
+                                      writable = False,
+                                      represent = s3_date_represent
+                                      #readable = False # unless the record is locked
+                                      ),
+                                Field("type",
+                                      "integer",
+                                      readable = False,
+                                      writable = False,
+                                      requires = IS_NULL_OR(IS_IN_SET(inv_recv_type)),
+                                      represent = lambda opt: inv_recv_type.get(opt, UNKNOWN_OPT),
+                                      label = T("Type"),
+                                      default = 0,
+                                      ),
+                                person_id(name = "recipient_id",
+                                          label = T("Received By"),
+                                          readable = False,
+                                          writable = False,
+                                          #default = s3_logged_in_person()
+                                         ),
                                 Field("from_site_id",
                                        db.org_site,
+                                       readable = False,
+                                       writable = False,
                                        label = T("From Facility"),
-                                       requires = IS_ONE_OF(db,
-                                                            "org_site.site_id",
-                                                             lambda id: org_site_represent(id, link = False),
-                                                             sort=True,
-                                                            ),
+                                       requires = IS_NULL_OR(IS_ONE_OF(db, 
+                                                                       "org_site.site_id", 
+                                                                       lambda id: org_site_represent(id, link = False),
+                                                                       sort=True,
+                                                                      )),
                                        represent =  org_site_represent
                                       ),
                                 #location_id("from_location_id",
@@ -306,6 +321,8 @@ $(document).ready(function() {
                                 #                comment = organisation_comment),
                                 #Field("from_person"), # Text field, because lookup to pr_person record is unnecessarily complex workflow
                                 person_id(name = "sender_id",
+                                          readable = False,
+                                          writable = False,
                                           label = T("Sent By Person"),
                                           ),
                                 Field("status",
@@ -314,10 +331,13 @@ $(document).ready(function() {
                                       represent = lambda opt: shipment_status.get(opt, UNKNOWN_OPT),
                                       default = SHIP_STATUS_IN_PROCESS,
                                       label = T("Status"),
+                                      readable = False,
                                       writable = False,
                                       ),
                                 Field("grn_status",
                                       "integer",
+                                      readable = False,
+                                      writable = False,
                                       requires = IS_NULL_OR(IS_IN_SET(ship_doc_status)),
                                       represent = lambda opt: ship_doc_status.get(opt, UNKNOWN_OPT),
                                       default = SHIP_DOC_PENDING,
@@ -329,6 +349,8 @@ $(document).ready(function() {
                                       ),
                                 Field("cert_status",
                                       "integer",
+                                      readable = False,
+                                      writable = False,
                                       requires = IS_NULL_OR(IS_IN_SET(ship_doc_status)),
                                       represent = lambda opt: ship_doc_status.get(opt, UNKNOWN_OPT),
                                       default = SHIP_DOC_PENDING,
@@ -340,7 +362,74 @@ $(document).ready(function() {
                                       ),
                                 s3_comments(),
                                 *s3_meta_fields())
+        # Virtual Fields
+        # NB In HELIOS (like LA) each Order only has a single Item
+        class recv_virtualfields(dict, object):
+            # Fields to be loaded by sqltable as qfields
+            # without them being list_fields
+            # (These cannot contain VirtualFields)
+            extra_fields = [
+                        #"id"
+                    ]
 
+            def item(self):
+                itable = db.inv_recv_item
+                try:
+                    query = (itable.recv_id == self.inv_recv.id)
+                except AttributeError:
+                    # We are being instantiated inside one of the other methods
+                    return None
+                item = db(query).select(itable.item_id,
+                                        limitby=(0, 1),
+                                        cache=gis.cache).first()
+                if item:
+                    return response.s3.supply_item_represent(item.item_id)
+                else:
+                    return None
+
+            # Included within item()
+            #def pack(self):
+            #    itable = db.inv_recv_item
+            #    try:
+            #        query = (itable.recv_id == self.inv_recv.id)
+            #    except AttributeError:
+            #        # We are being instantiated inside one of the other methods
+            #        return None
+            #    item = db(query).select(itable.item_pack_id,
+            #                            limitby=(0, 1),
+            #                            cache=gis.cache).first()
+            #    if item:
+            #        return response.s3.item_pack_represent(item.item_pack_id)
+            #    else:
+            #        return None
+
+            def qty(self):
+                itable = db.inv_recv_item
+                try:
+                    query = (itable.recv_id == self.inv_recv.id)
+                except AttributeError:
+                    # We are being instantiated inside one of the other methods
+                    return None
+                item = db(query).select(itable.quantity,
+                                        limitby=(0, 1),
+                                        cache=gis.cache).first()
+                if item:
+                    return item.quantity
+                else:
+                    return None
+
+        table.virtualfields.append(recv_virtualfields())
+
+        # ---------------------------------------------------------------------
+        s3mgr.configure(tablename,
+                        list_fields = ["id",
+                                       "site_id",
+                                       (T("Item"), "item"),
+                                       #(T("Unit of Measure"), "pack"),
+                                       (T("Quantity"), "qty"),
+                                       "eta",
+                                       "comments"
+                                    ])
         # ---------------------------------------------------------------------
         def inv_recv_represent(id):
             # @ToDo: 'From Organisation' is great for Donations
@@ -391,35 +480,42 @@ $(document).ready(function() {
             recv_search_date_field = "date"
             recv_search_date_comment = T("Search for a shipment received between these dates")
         recv_search = s3base.S3Search(
-            simple=(s3base.S3SearchSimpleWidget(
-                        name="recv_search_text_simple",
-                        label=T("Search"),
-                        comment=recv_search_comment,
-                        field=[ "from_person",
-                                "comments",
-                                #"organisation_id$name",
-                                #"organisation_id$acronym",
-                                "from_site_id$name",
-                                "recipient_id$first_name",
-                                "recipient_id$middle_name",
-                                "recipient_id$last_name",
-                                "site_id$name"
-                                ]
-                      )),
+            # simple=(s3base.S3SearchSimpleWidget(
+                        # name="recv_search_text_simple",
+                        # label=T("Search"),
+                        # comment=recv_search_comment,
+                        # field=[ "from_person",
+                                # "comments",
+                                # "organisation_id$name",
+                                # "organisation_id$acronym",
+                                # "from_site_id$name",
+                                # "recipient_id$first_name",
+                                # "recipient_id$middle_name",
+                                # "recipient_id$last_name",
+                                # "site_id$name"
+                                # ]
+                      # )),
             advanced=(s3base.S3SearchSimpleWidget(
                         name="recv_search_text_advanced",
                         label=T("Search"),
                         comment=recv_search_comment,
-                        field=[ "from_person",
+                        field=[ #"from_person",
                                 "comments",
                                 #"organisation_id$name",
                                 #"organisation_id$acronym",
-                                "from_site_id$name",
-                                "recipient_id$first_name",
-                                "recipient_id$middle_name",
-                                "recipient_id$last_name",
+                                #"from_site_id$name",
+                                #"recipient_id$first_name",
+                                #"recipient_id$middle_name",
+                                #"recipient_id$last_name",
                                 "site_id$name"
                                 ]
+                      ),
+                      s3base.S3SearchOptionsWidget(
+                        name="recv_search_site",
+                        label=T("Office"),
+                        field=["site_id"],
+                        represent ="%(name)s",
+                        cols = 2
                       ),
                       s3base.S3SearchMinMaxWidget(
                         name="recv_search_date",
@@ -428,37 +524,30 @@ $(document).ready(function() {
                         comment=recv_search_date_comment,
                         field=[recv_search_date_field]
                       ),
-                      s3base.S3SearchOptionsWidget(
-                        name="recv_search_site",
-                        label=T("Facility"),
-                        field=["site_id"],
-                        represent ="%(name)s",
-                        cols = 2
-                      ),
-                      s3base.S3SearchOptionsWidget(
-                        name="recv_search_status",
-                        label=T("Status"),
-                        field=["status"],
-                        cols = 2
-                      ),
-                      s3base.S3SearchOptionsWidget(
-                        name="recv_search_grn",
-                        label=T("GRN Status"),
-                        field=["grn_status"],
-                        cols = 2
-                      ),
-                      s3base.S3SearchOptionsWidget(
-                        name="recv_search_cert",
-                        label=T("Certificate Status"),
-                        field=["grn_status"],
-                        cols = 2
-                      ),
+                      #s3base.S3SearchOptionsWidget(
+                      #  name="recv_search_status",
+                      #  label=T("Status"),
+                      #  field=["status"],
+                      #  cols = 2
+                      #),
+                      #s3base.S3SearchOptionsWidget(
+                      #  name="recv_search_grn",
+                      #  label=T("GRN Status"),
+                      #  field=["grn_status"],
+                      #  cols = 2
+                      #),
+                      # s3base.S3SearchOptionsWidget(
+                        # name="recv_search_cert",
+                        # label=T("Certificate Status"),
+                        # field=["grn_status"],
+                        # cols = 2
+                      # ),
             ))
 
         # ---------------------------------------------------------------------
         # Redirect to the Items tabs after creation
-        recv_item_url = URL(c="inv", f="recv", args=["[id]",
-                                                     "recv_item"])
+        recv_item_url = URL(c="default", f="recv", args=["[id]",
+                                                         "recv_item"])
         # ---------------------------------------------------------------------
         s3mgr.configure(tablename,
                         # @ToDo: Move these to controller r.interactive?
@@ -476,25 +565,25 @@ $(document).ready(function() {
                     rheader = DIV( TABLE(
                                        TR( TH( "%s: " % T("Date Expected")),
                                            recv_record.eta or NONE,
-                                           TH("%s: " % T("Status")),
-                                           shipment_status.get(recv_record.status, UNKNOWN_OPT),
+                                           # TH("%s: " % T("Status")),
+                                           # shipment_status.get(recv_record.status, UNKNOWN_OPT),
                                           ),
-                                       TR( TH( "%s: " % T("Date Received")),
-                                           recv_record.date or NONE,
-                                          ),
-                                       TR( TH( "%s: " % T("By Facility")),
+                                       # TR( TH( "%s: " % T("Date Received")),
+                                           # recv_record.date or NONE,
+                                          # ),
+                                       TR( TH( "%s: " % T("By Office")),
                                            org_site_represent(recv_record.site_id),
                                           ),
-                                       TR( TH( "%s: " % T("From Location")),
-                                           org_site_represent(recv_record.from_site_id),
+                                       # TR( TH( "%s: " % T("From Location")),
+                                           # org_site_represent(recv_record.from_site_id),
                                            #TH( "%s: " % T("From Organization")),
                                            #organisation_represent(recv_record.organisation_id),
-                                          ),
-                                       TR( TH( "%s: " % T("Sent By Person")),
-                                           s3_fullname(recv_record.sender_id),
-                                           TH( "%s: " % T("Received By Person")),
-                                           s3_fullname(recv_record.recipient_id),
-                                          ),
+                                          # ),
+                                       # TR( TH( "%s: " % T("Sent By Person")),
+                                           # s3_fullname(recv_record.sender_id),
+                                           # TH( "%s: " % T("Received By Person")),
+                                           # s3_fullname(recv_record.recipient_id),
+                                          # ),
                                        TR( TH( "%s: " % T("Comments")),
                                            TD(recv_record.comments, _colspan=2),
                                           ),
@@ -517,8 +606,8 @@ $(document).ready(function() {
 
                             recv_btn_confirm = SCRIPT("S3ConfirmClick('#recv_process', '%s')"
                                                       % T("Do you want to receive this shipment?") )
-                            response.s3.rfooter.append(recv_btn)
-                            response.s3.rfooter.append(recv_btn_confirm)
+                            #response.s3.rfooter.append(recv_btn)
+                            #response.s3.rfooter.append(recv_btn_confirm)
                     else:
                         grn_btn = A( T("Goods Received Note"),
                                       _href = URL(#c = "inv",
@@ -528,14 +617,14 @@ $(document).ready(function() {
                                       _class = "action-btn"
                                       )
                         response.s3.rfooter.append(grn_btn)
-                        dc_btn = A( T("Donation Certificate"),
-                                      _href = URL(#c = "inv",
-                                                  f = "recv",
-                                                  args = [recv_record.id, "cert.pdf"]
-                                                  ),
-                                      _class = "action-btn"
-                                      )
-                        response.s3.rfooter.append(dc_btn)
+                        # dc_btn = A( T("Donation Certificate"),
+                                      # _href = URL(#c = "inv",
+                                                  # f = "recv",
+                                                  # args = [recv_record.id, "cert.pdf"]
+                                                  # ),
+                                      # _class = "action-btn"
+                                      # )
+                        # response.s3.rfooter.append(dc_btn)
 
                         if recv_record.status != SHIP_STATUS_CANCEL:
                             if auth.s3_has_permission("delete",
@@ -579,15 +668,14 @@ $(document).ready(function() {
             auth.permission.permitted_facilities(table=table,
                                                  error_msg=error_msg)
 
-            def prep(r):
-                # If component view
-                if r.record:
-                    if r.record.status == SHIP_STATUS_IN_PROCESS:
-                        s3.crud_strings.inv_recv.title_update = \
-                        s3.crud_strings.inv_recv.title_display = T("Process Received Shipment")
-                return True
-
-            response.s3.prep = prep
+            #def prep(r):
+            #    # If component view
+            #    if r.record:
+            #        if r.record.status == SHIP_STATUS_IN_PROCESS:
+            #            s3.crud_strings.inv_recv.title_update = \
+            #           s3.crud_strings.inv_recv.title_display = T("Process Received Shipment")
+            #    return True
+            #response.s3.prep = prep
 
             output = s3_rest_controller("inv", "recv",
                                         rheader=inv_recv_rheader)
@@ -1157,10 +1245,10 @@ $(document).ready(function() {
                         recv_tab = T("Orders")
                     else:
                         recv_tab = T("Receive")
-                    inv_tabs = [(T("Inventory Items"), "inv_item"),
-                                (T("Incoming"), "incoming/"),
+                    inv_tabs = [(T("Stock Items"), "inv_item"),
+                                #(T("Incoming"), "incoming/"),
                                 (recv_tab, "recv"),
-                                (T("Send"), "send", dict(select="sent")),
+                                #(T("Send"), "send", dict(select="sent")),
                                 ]
                     if deployment_settings.has_module("proc"):
                         inv_tabs.append((T("Planned Procurements"), "plan"))

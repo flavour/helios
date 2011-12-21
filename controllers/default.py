@@ -7,6 +7,12 @@
 """
 
 module = "default"
+resourcename = request.function
+
+# Options Menu (available in all Functions' Views)
+# - can Insert/Delete items from default menus within a function, if required.
+if auth.is_logged_in():
+    s3_menu(module)
 
 # -----------------------------------------------------------------------------
 def call():
@@ -122,75 +128,11 @@ _table_user.site_id.comment = DIV(_class="tooltip",
 def index():
     """ Main Home Page """
 
+    if auth.is_logged_in():
+        redirect(URL(f="item_entity"))
+
     title = deployment_settings.get_system_name()
     response.title = title
-
-    if deployment_settings.has_module("cr"):
-        s3mgr.load("cr_shelter")
-        SHELTERS = s3.crud_strings["cr_shelter"].subtitle_list
-    else:
-        SHELTERS = ""
-
-    # Menu Boxes
-    menu_btns = [#div, label, app, function
-                ["facility", SHELTERS, "cr", "shelter"],
-                ["facility", T("Warehouses"), "inv", "warehouse"],
-                ["facility", T("Hospitals"), "hms", "hospital"],
-                ["facility", T("Offices"), "org", "office"],
-                ["sit", T("Incidents"), "irs", "ireport"],
-                ["sit", T("Assessments"), "survey", "series"],
-                ["sit", T("Assets"), "asset", "asset"],
-                ["sit", T("Inventory Items"), "inv", "inv_item"],
-                #["dec", T("Gap Map"), "project", "gap_map"],
-                #["dec", T("Gap Report"), "project", "gap_report"],
-                ["dec", T("Requests"), "req", "req"],
-                ["res", T("Projects"), "project", "project"],
-                ["res", T("Activities"), "project", "site"],
-                ["res", T("Commitments"), "req", "commit"],
-                ["res", T("Sent Shipments"), "inv", "send"],
-                ["res", T("Received Shipments"), "inv", "recv"],
-                ]
-
-    # Change to (Mitigation)/Preparedness/Response/Recovery?
-    menu_divs = {"facility": DIV( H3(T("Facilities")),
-                                 _id = "facility_box", _class = "menu_box"),
-                 "sit": DIV( H3(T("Situation")),
-                              _id = "menu_div_sit", _class = "menu_div"),
-                 "dec": DIV( H3(T("Decision")),
-                              _id = "menu_div_dec", _class = "menu_div"),
-                 "res": DIV( H3(T("Response")),
-                              _id = "menu_div_res", _class = "menu_div"),
-                }
-
-    for div, label, app, function in menu_btns:
-        if deployment_settings.has_module(app):
-            # @ToDo: Also check permissions (e.g. for anonymous users)
-            menu_divs[div].append(A( DIV(label,
-                                         _class = "menu-btn-r"),
-                                     _class = "menu-btn-l",
-                                     _href = URL(app,function)
-                                    )
-                                 )
-
-    div_arrow = DIV(IMG(_src = "/%s/static/img/arrow_blue_right.png" % \
-                               request.application),
-                          _class = "div_arrow")
-    sit_dec_res_box = DIV(menu_divs["sit"],
-                          div_arrow,
-                          menu_divs["dec"],
-                          div_arrow,
-                          menu_divs["res"],
-                          _id = "sit_dec_res_box",
-                          _class = "menu_box fleft swidth"
-                     #div_additional,
-                    )
-    facility_box  = menu_divs["facility"]
-    facility_box.append( A( IMG(_src = "/%s/static/img/map_icon_128.png" % \
-                                    request.application),
-                            _href = URL(c="gis", f="index"),
-                            _title = T("Map")
-                            )
-                        )
 
     datatable_ajax_source = ""
     # Check logged in AND permissions
@@ -211,13 +153,13 @@ def index():
             facility_opts = [OPTION(opt[1], _value = opt[0])
                              for opt in facility_list]
             if facility_list:
-                manage_facility_box = DIV(H3(T("Manage Your Facilities")),
+                manage_facility_box = DIV(H3(T("Jump to Office")),
                                     SELECT(_id = "manage_facility_select",
                                             _style = "max-width:400px;",
                                             *facility_opts
                                             ),
                                     A(T("Go"),
-                                        _href = URL(c="default", f="site",
+                                        _href = URL(c="default", f="office",
                                                     args=[facility_list[0][0]]),
                                         #_disabled = "disabled",
                                         _id = "manage_facility_btn",
@@ -227,25 +169,13 @@ def index():
                                     _class = "menu_box fleft")
                 response.s3.jquery_ready.append( """
 $('#manage_facility_select').change(function() {
-    $('#manage_facility_btn').attr('href', S3.Ap.concat('/default/site/',  $('#manage_facility_select').val()));
+    $('#manage_facility_btn').attr('href', S3.Ap.concat('/default/office/',  $('#manage_facility_select').val()));
 })""" )
             else:
                 manage_facility_box = DIV()
 
-        org_box = DIV( H3(T("Organizations")),
-                       A(T("Add Organization"),
-                          _href = URL(c="org", f="organisation",
-                                      args=["create"]),
-                          _id = "add-btn",
-                          _class = "action-btn",
-                          _style = "margin-right: 10px;"),
-                        org_items["items"],
-                        _id = "org_box",
-                        _class = "menu_box fleft"
-                        )
     else:
         manage_facility_box = ""
-        org_box = ""
 
     # @ToDo: Replace this with an easily-customisable section on the homepage
     #settings = db(db.s3_setting.id == 1).select(limitby=(0, 1)).first()
@@ -365,13 +295,13 @@ google.setOnLoadCallback(LoadDynamicFeedControl);"""))
 
     return dict(title = title,
 
-                sit_dec_res_box = sit_dec_res_box,
-                facility_box = facility_box,
+                #sit_dec_res_box = sit_dec_res_box,
+                #facility_box = facility_box,
                 manage_facility_box = manage_facility_box,
-                org_box = org_box,
+                #org_box = org_box,
 
-                r = None, # Required for dataTable to work
-                datatable_ajax_source = datatable_ajax_source,
+                #r = None, # Required for dataTable to work
+                #datatable_ajax_source = datatable_ajax_source,
                 #admin_name=admin_name,
                 #admin_email=admin_email,
                 #admin_tel=admin_tel,
@@ -387,6 +317,7 @@ google.setOnLoadCallback(LoadDynamicFeedControl);"""))
 def organisation():
     """
         Function to handle pagination for the org list on the homepage
+        - this is overridden in HELIOS by new function lower down!
     """
 
     table = db.org_organisation
@@ -405,7 +336,7 @@ def organisation():
                                                           "%s"),
                     list_fields = ["id",])
 
-    return s3_rest_controller("org", "organisation")
+    return s3_rest_controller("org", resourcename)
 # -----------------------------------------------------------------------------
 def site():
     """
@@ -505,7 +436,7 @@ def user():
 # -----------------------------------------------------------------------------
 def source():
     """ RESTful CRUD controller """
-    return s3_rest_controller("s3", "source")
+    return s3_rest_controller("s3", resourcename)
 
 # -----------------------------------------------------------------------------
 # About Sahana
@@ -637,5 +568,408 @@ def contact():
         response.title = T("Contact us")
         return dict()
 
+# =============================================================================
+# HELIOS-specific
+# =============================================================================
+def office_onvalidation(form):
+    """
+        Populate the name & location fields
+    """
+
+    # Name
+    table = db.org_organisation
+    query = (table.id == form.vars.organisation_id)
+    org = db(query).select(table.name,
+                           limitby=(0, 1)).first()
+
+    ltable = db.gis_location
+    query = (ltable.id == form.vars.location_id)
+    loc = db(query).select(ltable.name,
+                           limitby=(0, 1)).first()
+
+    try:
+        form.vars.name = "%s %s" % (org.name,
+                                    loc.name)
+    except:
+        # Bad Data
+        if org:
+            form.vars.name = "%s (%s)" % (org.name,
+                                          T("Unknown Location"))
+        elif loc:
+            form.vars.name = "%s (%s)" % (T("Unknown Organisation"),
+                                          loc.name)
+        else:
+            form.vars.name = "%s (%s)" % (T("Unknown Organisation"),
+                                          T("Unknown Location"))
+
+    # L0
+    form.vars.L0 = loc.name
+
+    # location_id
+    table = db.org_office
+    query = (table.id == form.vars.id)
+    current_loc = db(query).select(table.location_id,
+                                   limitby=(0, 1)).first()
+    if current_loc:
+        query = (ltable.id == current_loc.location_id)
+        db(query).update(parent = form.vars.location_id)
+        form.vars.location_id = current_loc.location_id
+    else:
+        loc_id = ltable.insert(name = form.vars.name,
+                               parent = form.vars.location_id)
+        form.vars.location_id = loc_id
+
+    return
+
+# -----------------------------------------------------------------------------
+def office():
+    """ RESTful CRUD controller """
+
+    table = db.org_office
+    table.name.readable = False
+    table.name.writable = False
+    s3mgr.configure(table,
+                    create_next = URL(args=["[id]", "inv_item"]),
+                    onvalidation = office_onvalidation)
+
+    # Defined in the Model for use from Multiple Controllers for unified menus
+    #return response.s3.office_controller()
+    return office_controller()
+
+# -----------------------------------------------------------------------------
+def organisation():
+    """ RESTful CRUD controller """
+
+    s3mgr.configure("org_organisation",
+                    create_next = URL(args=["[id]", "office"]))
+
+    table = db.org_office
+    table.name.readable = False
+    table.name.writable = False
+    s3mgr.configure(table,
+                    create_next = URL(f="office", args=["[id]", "inv_item"]),
+                    onvalidation = office_onvalidation)
+
+    # Defined in the Model for use from Multiple Controllers for unified menus
+    #return response.s3.organisation_controller()
+    return organisation_controller()
+
+# -----------------------------------------------------------------------------
+def item():
+    """ REST Controller """
+
+    # Load Models
+    s3mgr.load("supply_item")
+
+    # Defined in the Model for use from Multiple Controllers for unified menus
+    return response.s3.supply_item_controller()
+
+# -----------------------------------------------------------------------------
+def inv_item():
+    """ REST Controller """
+
+    # Load Models
+    s3mgr.load("inv_inv_item")
+
+    # Defined in the Model for use from Multiple Controllers for unified menus
+    return response.s3.inv_item_controller()
+
+# -----------------------------------------------------------------------------
+def recv():
+    """ REST Controller """
+
+    # Load Models
+    s3mgr.load("inv_recv")
+
+    # Defined in the Model for use from Multiple Controllers for unified menus
+    return response.s3.inv_recv_controller()
+
+# -----------------------------------------------------------------------------
+def recv_item():
+    """
+        REST Controller
+        - exposed just for Imports
+    """
+
+    # Load Models
+    s3mgr.load("inv_recv_item")
+
+    output = s3_rest_controller("inv", resourcename)
+    return output
+
+# -----------------------------------------------------------------------------
+def supplier():
+    """ RESTful CRUD controller """
+
+    # Load Models
+    s3mgr.load("proc_supplier")
+
+    return s3_rest_controller("proc", resourcename)
+
+# -----------------------------------------------------------------------------
+def plan():
+    """ RESTful CRUD controller """
+
+    # Load Models
+    s3mgr.load("proc_plan")
+
+    rheader = response.s3.plan_rheader
+    return s3_rest_controller("proc", resourcename,
+                              rheader=rheader)
+
+# -----------------------------------------------------------------------------
+def item_entity():
+    """
+        REST Controller
+        - consolidated report of inv_item & recv_item
+    """
+
+    # Load Models
+    s3mgr.load("supply_item")
+
+    # Defined in the Model for use from Multiple Controllers for unified menus
+    return response.s3.item_entity_controller()
+
+# =============================================================================
+def import_file():
+    """
+        Simple Import Tool
+        - interim functionality until the proper interactive import tool is built.
+
+        @ToDo: Instructions on how to fill-out CSV file
+    """
+
+    tablename = "admin_import_file"
+    table = db[tablename]
+
+    table.type.default = "helios"
+    table.type.readable = False
+    table.type.writable = False
+    table.file.comment = A(T("Download Template"),
+                           _href=URL(c="static", f="formats",
+                                     args=["s3csv", "helios.csv"]),
+                           _id="dl_template"),
+
+    # CRUD Strings
+    s3.crud_strings[tablename] = Storage(
+        title_create = T("Import New File"),
+        title_display = T("Import File Details"),
+        #title_list = T("List Import Files"),
+        title_list = T("Upload Spreadsheet"),
+        title_update = T("Edit Import File"),
+        title_search = T("Search Import Files"),
+        subtitle_create = T("Import New File"),
+        subtitle_list = T("Import Files"),
+        label_list_button = T("List Import Files"),
+        label_create_button = T("Import New File"),
+        msg_record_created = T("File Imported"),
+        msg_record_modified = T("File Imported"),
+        msg_record_deleted = T("Import File deleted"),
+        msg_list_empty = T("No Import Files currently uploaded"))
+
+    s3.crud.submit_button = T("Import")
+    
+    s3mgr.configure(tablename,
+                    onvalidation=import_file_onvalidation,
+                    onaccept=import_file_onaccept,
+                    create_next = URL(f="item_entity"),
+                    list_fields = ["id",
+                                   #"type",
+                                   "filename",
+                                   "modified_on",
+                                   "comments"
+                                ])
+
+    response.s3.jquery_ready.append( """
+$('#dl_template').click(function(evt) {
+    S3ClearNavigateAwayConfirm();
+    return true;
+})
+""" )
+
+    
+    def postp(r, output):
+        if r.interactive:
+            if isinstance(output, dict):
+                # Hide the list of previously-uploaded files
+                try:
+                    output.pop("items")
+                    output.pop("subtitle")
+                except:
+                    # Create form
+                    pass
+        return output
+    response.s3.postp = postp
+    
+    return s3_rest_controller("admin", resourcename)
+
+# -----------------------------------------------------------------------------
+def import_file_onvalidation(form):
+    """
+        Populate the filename field
+    """
+
+    form.vars.filename = form.vars.file.filename
+    return
+
+# -----------------------------------------------------------------------------
+def inv_item_import_prep(import_data):
+    """
+        Delete all:
+        - inv_inv_item
+        - inv_recv_item
+        - inv_recv
+        - proc_plan_item
+        - proc_plan
+        - org_office
+        - org_organisation (unless still present due to another office)
+
+        Match the offices by organisation+country (or office name?)
+    """
+
+    resource, tree = import_data
+
+    root = tree.getroot()
+    offices = root.findall(".//resource[@name='org_office']")
+    for office in offices:
+        name = office.findall("./data[@field='name']")[0]
+
+        # Get the office record matching the name
+        # (maybe should get the office record matching organisation+country here?)
+        otable = db.org_office
+        query = (otable.name == name.text) & (otable.deleted != True)
+        rows = db(query).select()
+        for row in rows:
+
+            # Remove all inv_inv_item with that site_id
+            itable = db.inv_inv_item
+            ondelete = s3mgr.model.get_config("inv_inv_item", "ondelete")
+            resource = s3mgr.define_resource("inv", "inv_item",
+                                             filter=itable.site_id == row.site_id)
+            resource.delete(ondelete=ondelete, cascade=True)
+
+            # Remove all inv_inv_recv with that site_id
+            # This will cascade to inv_recv_item
+            itable = db.inv_recv
+            ondelete = s3mgr.model.get_config("inv_recv", "ondelete")
+            resource = s3mgr.define_resource("inv", "recv",
+                                             filter=itable.site_id == row.site_id)
+            resource.delete(ondelete=ondelete, cascade=True)
+
+            if deployment_settings.has_module("proc"):
+                # Remove all proc_plan with that site_id
+                # This will cascade to proc_plan_item
+                s3mgr.load("proc_plan")
+                ptable = db.proc_plan
+                ondelete = s3mgr.model.get_config("proc_plan", "ondelete")
+                resource = s3mgr.define_resource("proc", "plan",
+                                                 filter=ptable.site_id == row.site_id)
+                resource.delete(ondelete=ondelete, cascade=True)
+
+            # Remove this office
+            #ondelete = s3mgr.model.get_config("org_office", "ondelete")
+            #resource = s3mgr.define_resource("org", "office", id=row.id)
+            #resource.delete(ondelete=ondelete)
+
+            # Remove the org
+            # This may be impossible if there are other records referencing
+            # the organisation record, because organisation_id has ondelete=RESTRICT
+            # However, this method will not throw any error in this case, but
+            # just not delete (return value of resource.delete would be 0, though)
+            #ondelete = s3mgr.model.get_config("org_organisation", "ondelete")
+            #resource = s3mgr.define_resource("org", "organisation", id=row.organisation_id)
+            #resource.delete(ondelete=ondelete)
+
+    return
+
+# -----------------------------------------------------------------------------
+def helios():
+    """
+        Custom controller to process an upload file of stock and order items
+        REST clients can come direct here
+    """
+
+    content_type = request.env.get("content_type", None)
+    if content_type and content_type.startswith("multipart/"):
+        p = request.vars.file
+        import cgi
+        if isinstance(p, cgi.FieldStorage) and p.filename:
+            openfile = p.file
+            openfile.seek(0)
+        else:
+            session.error = T("No file to import")
+            redirect(URL(c="default", f="import_file"))
+    elif "filename" in request.get_vars:
+        filename = request.get_vars["filename"]
+        openfile = open(filename, "r")
+    else:
+        openfile = request.body
+        openfile.seek(0)
+
+    # Convert the CSV into a tree
+    xml = s3mgr.xml
+    tree = xml.csv2tree(openfile)
+    if not tree:
+        db.rollback()
+        session.error = xml.error
+        redirect(URL(c="default", f="import_file"))
+
+    # Stylesheet in the formats/s3csv folder
+    stylesheet = os.path.join(request.folder,
+                              "static",
+                              "formats",
+                              "s3csv",
+                              "helios.xsl")
+
+    # Process Stock Items
+    s3mgr.import_prep = inv_item_import_prep
+    resource = s3mgr.define_resource("inv", "inv_item")
+    result = resource.import_xml(tree,
+                                 stylesheet=stylesheet)
+    if resource.error:
+        db.rollback()
+        session.error = "%s: %s" % (resource.error,
+                                    result)
+        redirect(URL(c="default", f="import_file"))
+
+    # Process Order Items
+    s3mgr.import_prep = None
+    resource = s3mgr.define_resource("inv", "recv_item")
+    result = resource.import_xml(tree,
+                                 stylesheet=stylesheet)
+    if resource.error:
+        db.rollback()
+        session.error = "%s: %s"  % (resource.error,
+                                     result)
+        redirect(URL(c="default", f="import_file"))
+
+    if deployment_settings.has_module("proc"):
+        # Process Planned Procurements
+        s3mgr.import_prep = None
+        resource = s3mgr.define_resource("proc", "plan_item")
+        result = resource.import_xml(tree,
+                                     stylesheet=stylesheet)
+        if resource.error:
+            db.rollback()
+            session.error = "%s: %s"  % (resource.error,
+                                         result)
+            redirect(URL(c="default", f="import_file"))
+
+    return xml.json_message(True, 200, "File imported successfully.")
+
+# -----------------------------------------------------------------------------
+def import_file_onaccept(form):
+    """
+        When the import file is uploaded, do the import into the database
+    """
+
+    table = db.admin_import_file
+
+    uploadfolder = table.file.uploadfolder
+    filename = form.vars.file
+
+    filepath = os.path.join(uploadfolder, filename)
+    response.s3.filepath = filepath
+    helios()
 
 # END =========================================================================
